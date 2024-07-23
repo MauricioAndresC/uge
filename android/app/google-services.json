@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "826009346463",
+    "project_id": "usuarios-byr-uge",
+    "storage_bucket": "usuarios-byr-uge.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:826009346463:android:875cc3efc72dd97eca5daa",
+        "android_client_info": {
+          "package_name": "com.byr.uge"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIHnwWFpLWPr8AzirUoS5EmKBQHVag7xQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
