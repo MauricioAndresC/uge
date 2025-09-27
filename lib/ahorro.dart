@@ -1,232 +1,274 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
-class IneficienteScreen extends StatefulWidget {
+class AhorroScreen extends StatefulWidget {
+  const AhorroScreen({super.key});
+
   @override
-  _IneficienteScreenState createState() => _IneficienteScreenState();
+  _AhorroScreenState createState() => _AhorroScreenState();
 }
 
-class _IneficienteScreenState extends State<IneficienteScreen> {
+class _AhorroScreenState extends State<AhorroScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _chartKey = GlobalKey();
 
-  final _potenciaPromedioController = TextEditingController();
-  final _eficienciaPromedioController = TextEditingController();
-  final _nuevaEficienciaController = TextEditingController();
-  final _horasOperacionController = TextEditingController();
+  final _potenciaController = TextEditingController();
+  final _horasController = TextEditingController();
   final _costoKwhController = TextEditingController();
 
-  String _resultText = '';
+  double? _costoActualAnual;
+  double? _costoFuturoAnual;
+  double? _ahorroAnual;
+  double? _porcentajeAhorro;
+  double? _emisionesActualTon;
+  double? _emisionesFuturoTon;
+  double? _ahorroCO2_15y;
+  double? _paybackAnios;
+  double? _inversion;
 
-  // Tabla de precios de bombas
+  List<Map<String, double>> _tcoTable = [];
+
   final Map<String, double> preciosBombas = {
-    "0-5 Hp": 6500000,
-    "5-10 Hp": 8800000,
-    "10-15 Hp": 10600000,
-    "15-20 Hp": 12500000,
-    "20-30 Hp": 15320000,
-    "30-40 Hp": 22750000,
-    "40-50 Hp": 25000000,
-    "50-75 Hp": 32000000,
+    "0-5 Hp": 6500000 * 2.5,
+    "5-10 Hp": 8800000 * 2.5,
+    "10-15 Hp": 10600000 * 2.5,
+    "15-20 Hp": 12500000 * 2.5,
+    "20-30 Hp": 15320000 * 2.5,
+    "30-40 Hp": 22750000 * 2.5,
+    "40-50 Hp": 25000000 * 2.5,
+    "50-75 Hp": 32000000 * 2.5,
   };
 
-  String? _bombaSeleccionada;
+  static const double factorCO2 = 0.000180;
+  final _fmt = NumberFormat('#,##0', 'es_CO');
+  final _fmt2 = NumberFormat('#,##0.00', 'es_CO');
 
-  double? _costoInversion;
-  double? _ahorroAnual;
-  double? _roiAnios;
+  double _getCostoInversion(double hp) {
+    if (hp <= 5) return preciosBombas["0-5 Hp"]!;
+    if (hp <= 10) return preciosBombas["5-10 Hp"]!;
+    if (hp <= 15) return preciosBombas["10-15 Hp"]!;
+    if (hp <= 20) return preciosBombas["15-20 Hp"]!;
+    if (hp <= 30) return preciosBombas["20-30 Hp"]!;
+    if (hp <= 40) return preciosBombas["30-40 Hp"]!;
+    if (hp <= 50) return preciosBombas["40-50 Hp"]!;
+    return preciosBombas["50-75 Hp"]!;
+  }
 
-  List<Map<String, dynamic>> _tablaResultados = [];
+  void _calculateAll() {
+    if (!_formKey.currentState!.validate()) return;
 
-  void _calculate() {
-    if (_formKey.currentState!.validate() && _bombaSeleccionada != null) {
-      try {
-        double potenciaPromedio = double.parse(_potenciaPromedioController.text);
-        double eficienciaPromedio = double.parse(_eficienciaPromedioController.text);
-        double nuevaEficiencia = double.parse(_nuevaEficienciaController.text);
-        double horasOperacion = double.parse(_horasOperacionController.text);
-        double costoKwh = double.parse(_costoKwhController.text);
+    final hp = double.parse(_potenciaController.text);
+    final horas = double.parse(_horasController.text);
+    final costoKwh = double.parse(_costoKwhController.text);
 
-        // Costo de inversión según bomba seleccionada
-        double costoInversion = preciosBombas[_bombaSeleccionada]!;
+    const double efActual = 0.50;
+    const double efNueva = 0.70;
 
-        // Cálculos
-        double baseCalculoK = potenciaPromedio * 0.746 * 0.6666666667;
-        double calculoP2 = (baseCalculoK * eficienciaPromedio) / nuevaEficiencia;
-        double ahorroAnual = (baseCalculoK - calculoP2) * horasOperacion * costoKwh;
+    final inversion = _getCostoInversion(hp);
 
-        // ROI
-        double roiAnios = costoInversion / ahorroAnual;
+    final potenciaMotorKw = hp * 0.746;
+    final potenciaHidraulica = potenciaMotorKw * 0.67;
 
-        final formatter = NumberFormat('#,##0', 'es_CO');
+    final potenciaEntradaActual = potenciaHidraulica / efActual;
+    final potenciaEntradaFuturo = potenciaHidraulica / efNueva;
 
-        // Generar tabla para 5 años
-        List<Map<String, dynamic>> tabla = [];
-        for (int i = 1; i <= 5; i++) {
-          tabla.add({
-            "anio": i,
-            "ahorro": ahorroAnual * i,
-            "inversion": costoInversion,
-          });
-        }
+    final costoActualAnual = potenciaEntradaActual * horas * costoKwh;
+    final costoFuturoAnual = potenciaEntradaFuturo * horas * costoKwh;
 
-        setState(() {
-          _costoInversion = costoInversion;
-          _ahorroAnual = ahorroAnual;
-          _roiAnios = roiAnios;
-          _tablaResultados = tabla;
+    final ahorroAnual = costoActualAnual - costoFuturoAnual;
+    final porcentajeAhorro =
+        costoActualAnual > 0 ? (ahorroAnual / costoActualAnual * 100.0) : 0.0;
 
-          _resultText = """
-💡 Estudio para una bomba de $_bombaSeleccionada
-----------------------------------------
-🔹 Costo de inversión: ${formatter.format(costoInversion)} COP
-🔹 Ahorro anual estimado: ${formatter.format(ahorroAnual)} COP
-🔹 ROI (Retorno de inversión): ${roiAnios.toStringAsFixed(1)} años
-🔹 Ahorro acumulado en 5 años: ${formatter.format(ahorroAnual * 5)} COP
-""";
-        });
-      } catch (e) {
-        setState(() {
-          _resultText = "❌ Error en los cálculos. Verifique los datos.";
-        });
-      }
-    } else {
-      setState(() {
-        _resultText = "⚠️ Seleccione la bomba e ingrese todos los datos.";
+    final emisionesActual = potenciaEntradaActual * horas * factorCO2;
+    final emisionesFuturo = potenciaEntradaFuturo * horas * factorCO2;
+    final ahorroCO2_15y = (emisionesActual - emisionesFuturo) * 15.0;
+
+    final payback = ahorroAnual > 0 ? inversion / ahorroAnual : double.infinity;
+
+    List<Map<String, double>> tabla = [];
+    for (int year = 0; year <= 5; year++) {
+      final tcoActual = costoActualAnual * year;
+      final tcoNuevo = costoFuturoAnual * year + inversion;
+      tabla.add({
+        "anio": year.toDouble(),
+        "tco_actual": tcoActual,
+        "tco_nuevo": tcoNuevo,
       });
+    }
+
+    setState(() {
+      _costoActualAnual = costoActualAnual;
+      _costoFuturoAnual = costoFuturoAnual;
+      _ahorroAnual = ahorroAnual;
+      _porcentajeAhorro = porcentajeAhorro;
+      _emisionesActualTon = emisionesActual;
+      _emisionesFuturoTon = emisionesFuturo;
+      _ahorroCO2_15y = ahorroCO2_15y;
+      _paybackAnios = payback;
+      _inversion = inversion;
+      _tcoTable = tabla;
+    });
+  }
+
+  Future<void> _generatePdf() async {
+    try {
+      final boundary = _chartKey.currentContext!.findRenderObject()
+          as RenderRepaintBoundary;
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List chartBytes = byteData!.buffer.asUint8List();
+
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.MultiPage(
+          build: (context) => [
+            pw.Text("Reporte de Ahorro Energético",
+                style: pw.TextStyle(
+                    fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 12),
+
+            // Tabla resumen
+            pw.Table.fromTextArray(
+              headers: ["Concepto", "Valor"],
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
+              cellAlignment: pw.Alignment.centerLeft,
+              data: [
+                ["Costo anual actual", "${_fmt.format(_costoActualAnual)} COP"],
+                ["Costo anual optimizado", "${_fmt.format(_costoFuturoAnual)} COP"],
+                ["Ahorro anual", "${_fmt.format(_ahorroAnual)} COP"],
+                ["Ahorro [%]", "${_fmt2.format(_porcentajeAhorro)} %"],
+                ["Inversión estimada", "${_fmt.format(_inversion)} COP"],
+                [
+                  "Payback",
+                  _paybackAnios != null && _paybackAnios!.isFinite
+                      ? "${_paybackAnios!.toStringAsFixed(2)} años"
+                      : "N/A"
+                ],
+                ["Emisiones actuales", "${_emisionesActualTon!.toStringAsFixed(2)} ton"],
+                ["Emisiones optimizadas", "${_emisionesFuturoTon!.toStringAsFixed(2)} ton"],
+                ["Ahorro CO₂ en 15 años", "${_ahorroCO2_15y!.toStringAsFixed(2)} ton"],
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // Tabla TCO + Gráfico
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  flex: 1,
+                  child: pw.Table.fromTextArray(
+                    headers: ["Año", "Actual", "Nuevo + Inversión"],
+                    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
+                    data: _tcoTable.map((r) => [
+                      r["anio"]!.toInt().toString(),
+                      _fmt.format(r["tco_actual"]),
+                      _fmt.format(r["tco_nuevo"]),
+                    ]).toList(),
+                  ),
+                ),
+                pw.SizedBox(width: 20),
+                pw.Expanded(
+                  flex: 1,
+                  child: pw.Column(children: [
+                    pw.Text("Gráfico TCO (5 años)",
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.SizedBox(height: 8),
+                    pw.Image(pw.MemoryImage(chartBytes), height: 200),
+                  ]),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (format) async => pdf.save(),
+      );
+    } catch (e) {
+      debugPrint("Error al generar PDF: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error al generar el PDF")),
+      );
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final formatter = NumberFormat('#,##0', 'es_CO');
+  Widget _buildTcoChart() {
+    if (_tcoTable.isEmpty) return const SizedBox.shrink();
+    final spotsActual = _tcoTable
+        .map((r) => FlSpot(r["anio"]!, r["tco_actual"]!))
+        .toList();
+    final spotsNuevo = _tcoTable
+        .map((r) => FlSpot(r["anio"]!, r["tco_nuevo"]!))
+        .toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Estudio de Motobombas"),
-        backgroundColor: Colors.blue,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // Dropdown selección de bomba
-              DropdownButtonFormField<String>(
-                value: _bombaSeleccionada,
-                items: preciosBombas.keys
-                    .map((hp) => DropdownMenuItem(
-                          child: Text("Motobomba $hp"),
-                          value: hp,
-                        ))
-                    .toList(),
-                decoration: InputDecoration(
-                  labelText: "Seleccione potencia de la bomba (Hp)",
-                  border: OutlineInputBorder(),
+    double maxVal = _tcoTable
+            .map((r) => r["tco_actual"]! > r["tco_nuevo"]!
+                ? r["tco_actual"]!
+                : r["tco_nuevo"]!)
+            .reduce((a, b) => a > b ? a : b);
+    final maxY = (maxVal * 1.1);
+
+    // determinar intervalo dinámico
+    double interval = maxY / 5;
+
+    String formatNumber(double value) {
+      if (value >= 1e6) {
+        return "${(value / 1e6).toStringAsFixed(0)} M";
+      } else if (value >= 1e3) {
+        return "${(value / 1e3).toStringAsFixed(0)} K";
+      } else {
+        return value.toStringAsFixed(0);
+      }
+    }
+
+    return RepaintBoundary(
+      key: _chartKey,
+      child: SizedBox(
+        height: 260,
+        child: LineChart(
+          LineChartData(
+            minX: 0,
+            maxX: 5,
+            minY: 0,
+            maxY: maxY,
+            titlesData: FlTitlesData(
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: interval,
+                  getTitlesWidget: (value, meta) {
+                    return Text(formatNumber(value));
+                  },
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    _bombaSeleccionada = value;
-                  });
-                },
-                validator: (value) =>
-                    value == null ? "Seleccione una bomba" : null,
               ),
-              SizedBox(height: 12),
-              _buildTextField(_potenciaPromedioController, "Potencia promedio (Hp)", TextInputType.number),
-              _buildTextField(_eficienciaPromedioController, "Eficiencia promedio (%)", TextInputType.number),
-              _buildTextField(_nuevaEficienciaController, "Nueva eficiencia (%)", TextInputType.number),
-              _buildTextField(_horasOperacionController, "Horas de operación", TextInputType.number),
-              _buildTextField(_costoKwhController, "Costo kWh (COP)", TextInputType.number),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _calculate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 30),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: 1,
+                  getTitlesWidget: (value, meta) {
+                    return Text("${value.toInt()}");
+                  },
                 ),
-                child: Text("Calcular", style: TextStyle(fontSize: 18)),
               ),
-              SizedBox(height: 20),
-              Text(
-                _resultText,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 20),
-
-              // Tabla con resultados de 5 años
-              if (_tablaResultados.isNotEmpty)
-                DataTable(
-                  border: TableBorder.all(),
-                  columns: const [
-                    DataColumn(label: Text("Año")),
-                    DataColumn(label: Text("Ahorro Acumulado (COP)")),
-                    DataColumn(label: Text("Inversión (COP)")),
-                  ],
-                  rows: _tablaResultados.map((fila) {
-                    return DataRow(cells: [
-                      DataCell(Text(fila["anio"].toString())),
-                      DataCell(Text(formatter.format(fila["ahorro"]))),
-                      DataCell(Text(formatter.format(fila["inversion"]))),
-                    ]);
-                  }).toList(),
-                ),
-
-              SizedBox(height: 20),
-
-              // Gráfica a 5 años
-              if (_costoInversion != null && _ahorroAnual != null)
-                SizedBox(
-                  height: 300,
-                  child: LineChart(
-                    LineChartData(
-                      titlesData: FlTitlesData(
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            interval: 1,
-                            getTitlesWidget: (value, meta) {
-                              if (value >= 1 && value <= 5) {
-                                return Text("${value.toInt()} año");
-                              }
-                              return Text("");
-                            },
-                          ),
-                        ),
-                      ),
-                      lineBarsData: [
-                        // Línea de ahorro acumulado
-                        LineChartBarData(
-                          spots: List.generate(
-                            5,
-                            (i) => FlSpot(
-                              (i + 1).toDouble(),
-                              _ahorroAnual! * (i + 1),
-                            ),
-                          ),
-                          isCurved: false,
-                          color: Colors.green,
-                          barWidth: 3,
-                        ),
-                        // Línea inversión
-                        LineChartBarData(
-                          spots: List.generate(
-                            5,
-                            (i) => FlSpot(
-                              (i + 1).toDouble(),
-                              _costoInversion!,
-                            ),
-                          ),
-                          isCurved: false,
-                          color: Colors.red,
-                          barWidth: 3,
-                          dashArray: [5, 5],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+            ),
+            lineBarsData: [
+              LineChartBarData(
+                  spots: spotsActual, isCurved: true, color: Colors.red, barWidth: 3),
+              LineChartBarData(
+                  spots: spotsNuevo, isCurved: true, color: Colors.green, barWidth: 3),
             ],
           ),
         ),
@@ -234,23 +276,94 @@ class _IneficienteScreenState extends State<IneficienteScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, TextInputType inputType) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Estudio Ahorro Energía & CO₂"),
+        actions: [
+          if (_costoActualAnual != null)
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf),
+              onPressed: _generatePdf,
+            ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: Column(children: [
+            _buildTextField(_potenciaController, "Potencia bomba (HP)"),
+            _buildTextField(_horasController, "Horas de operación al año"),
+            _buildTextField(_costoKwhController, "Costo kWh (COP)"),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: _calculateAll, child: const Text("Calcular")),
+            const SizedBox(height: 14),
+            if (_costoActualAnual != null) ...[
+              _buildResultsCard(),
+              const SizedBox(height: 14),
+              _buildTcoChart(),
+            ]
+          ]),
         ),
-        keyboardType: inputType,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return "Por favor, complete este campo";
+      ),
+    );
+  }
+
+  Widget _buildResultsCard() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Resultados", style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              _resultRow("Costo anual actual", "${_fmt.format(_costoActualAnual!)} COP"),
+              _resultRow("Costo anual optimizado", "${_fmt.format(_costoFuturoAnual!)} COP"),
+              _resultRow("Ahorro anual", "${_fmt.format(_ahorroAnual!)} COP"),
+              _resultRow("Ahorro [%]", "${_fmt2.format(_porcentajeAhorro!)} %"),
+              _resultRow("Inversión estimada", "${_fmt.format(_inversion!)} COP"),
+              _resultRow("Payback",
+                  _paybackAnios != null && _paybackAnios!.isFinite
+                      ? "${_paybackAnios!.toStringAsFixed(2)} años"
+                      : "N/A"),
+              _resultRow("Emisiones actuales", "${_emisionesActualTon!.toStringAsFixed(2)} ton"),
+              _resultRow("Emisiones optimizadas", "${_emisionesFuturoTon!.toStringAsFixed(2)} ton"),
+              _resultRow("Ahorro CO₂ en 15 años", "${_ahorroCO2_15y!.toStringAsFixed(2)} ton"),
+            ]),
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController ctrl, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: TextFormField(
+        controller: ctrl,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        validator: (v) {
+          if (v == null || v.trim().isEmpty) return "Ingrese un valor";
+          if (double.tryParse(v.replaceAll(',', '.')) == null) {
+            return "Número inválido";
           }
           return null;
         },
       ),
+    );
+  }
+
+  Widget _resultRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(children: [
+        Expanded(child: Text(title)),
+        const SizedBox(width: 8),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ]),
     );
   }
 }

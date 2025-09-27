@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
-import 'ahorro.dart';
-import 'friccion.dart';
-import 'recirculacion.dart';
-import 'valvula.dart';
-import 'torre.dart';
-import 'login_screen.dart';
+// Asumiendo que estas clases están definidas en sus respectivos archivos:
+import 'ahorro.dart';        // Contiene AhorroScreen
+import 'friccion.dart';      // Contiene FriccionActivity
+import 'recirculacion.dart'; // Contiene RecirculacionActivity
+import 'valvula.dart';       // Contiene ValvulaActivity
+import 'torre.dart';         // Contiene TorreActivity
+import 'login_screen.dart';  // Contiene LoginScreen
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -18,22 +21,20 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        buttonTheme: ButtonThemeData(
-          buttonColor: Colors.blueAccent,
-          textTheme: ButtonTextTheme.primary,
-        ),
+        
+        // CORRECCIÓN 1: Mejor contraste para el texto del botón
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            foregroundColor: Color.fromARGB(255, 123, 190, 235),
+            foregroundColor: Colors.white, // Texto blanco para alto contraste
             backgroundColor: Colors.blueAccent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           elevation: 4,
           color: Colors.blueAccent,
           titleTextStyle: TextStyle(
@@ -45,8 +46,9 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => HomeScreen(),
-        '/ahorro': (context) => IneficienteScreen(), // ✅ CORREGIDO
+        '/': (context) => const HomeScreen(),
+        // CORRECCIÓN 2: Reemplazar IneficienteScreen por AhorroScreen
+        '/ahorro': (context) => AhorroScreen(), 
         '/friccion': (context) => FriccionActivity(),
         '/recirculacion': (context) => RecirculacionActivity(),
         '/valvula': (context) => ValvulaActivity(),
@@ -57,12 +59,14 @@ class MyApp extends StatelessWidget {
 }
 
 class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text('Inicio'),
+        title: const Text('Inicio'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -74,12 +78,13 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => IneficienteScreen()), // ✅ CORREGIDO
+                  // CORRECCIÓN 3: Reemplazar IneficienteScreen por AhorroScreen
+                  MaterialPageRoute(builder: (context) => AhorroScreen()), 
                 );
               },
-              child: Text('Motobombas Ineficientes'),
+              child: const Text('Motobombas Ineficientes'),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -87,9 +92,9 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => FriccionActivity()),
                 );
               },
-              child: Text('Pérdidas por Fricción'),
+              child: const Text('Pérdidas por Fricción'),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -97,9 +102,9 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => RecirculacionActivity()),
                 );
               },
-              child: Text('Recirculación de Agua'),
+              child: const Text('Recirculación de Agua'),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -107,9 +112,9 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => ValvulaActivity()),
                 );
               },
-              child: Text('Válvula Parcialmente Cerrada'),
+              child: const Text('Válvula Parcialmente Cerrada'),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -117,20 +122,22 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => TorreActivity()),
                 );
               },
-              child: Text('Torre de Enfriamiento'),
+              child: const Text('Torre de Enfriamiento'),
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          // Asume que LoginScreen está definido en login_screen.dart
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => LoginScreen()),
           );
         },
-        child: Icon(Icons.exit_to_app),
+        child: const Icon(Icons.exit_to_app),
         backgroundColor: Colors.blueAccent,
+        foregroundColor: Colors.white,
       ),
     );
   }
