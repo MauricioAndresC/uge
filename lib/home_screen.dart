@@ -19,23 +19,23 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
         buttonTheme: ButtonThemeData(
-          buttonColor: Colors.blueAccent, // Color de fondo de los botones
-          textTheme: ButtonTextTheme.primary, // Color del texto del botón
+          buttonColor: Colors.blueAccent,
+          textTheme: ButtonTextTheme.primary,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            foregroundColor: Color.fromARGB(255, 123, 190, 235), 
-            backgroundColor: Colors.blueAccent, // Color del texto del botón
+            foregroundColor: Color.fromARGB(255, 123, 190, 235),
+            backgroundColor: Colors.blueAccent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12), // Borde redondeado
+              borderRadius: BorderRadius.circular(12),
             ),
-            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24), // Espaciado interno
-            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), // Estilo del texto
+            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
         appBarTheme: AppBarTheme(
-          elevation: 4, // Sombra del AppBar
-          color: Colors.blueAccent, // Color del AppBar
+          elevation: 4,
+          color: Colors.blueAccent,
           titleTextStyle: TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => HomeScreen(),
-        '/ahorro': (context) => IneficienteScreen(), // Cambiado a IneficienteScreen
+        '/ahorro': (context) => IneficienteScreen(), // ✅ CORREGIDO
         '/friccion': (context) => FriccionActivity(),
         '/recirculacion': (context) => RecirculacionActivity(),
         '/valvula': (context) => ValvulaActivity(),
@@ -60,7 +60,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100], // Color de fondo neutro
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text('Inicio'),
       ),
@@ -74,7 +74,7 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => IneficienteScreen()),
+                  MaterialPageRoute(builder: (context) => IneficienteScreen()), // ✅ CORREGIDO
                 );
               },
               child: Text('Motobombas Ineficientes'),
